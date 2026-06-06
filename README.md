@@ -2,6 +2,14 @@
 
 Rust library and CLI for downloading audio recordings from BLE-enabled voice recorders.
 
+## Why
+
+This project started out of a growing discomfort with using portable recorders like the Soundcore Work or Plaud to transcribe meetings — meetings that often involve confidential information. These devices push audio through their own cloud services, which wasn't acceptable.
+
+The first step was to extract audio recordings directly from the device over BLE, bypassing any cloud dependency. The second step was to transcribe locally using a model like [Whisper](https://github.com/openai/whisper). mic-rs solves the first problem: getting your audio off the device, privately and programmatically.
+
+## Device support
+
 Currently supports the **Anker Soundcore Work D3200**. Support for **Plaud** devices is planned. Additional devices may follow based on demand and community contributions.
 
 ## Features
