@@ -1,6 +1,6 @@
 [package]
 name = "mic-rs"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "BLE client for downloading audio from portable voice recorders (Soundcore D3200, Plaud planned)"
 license = "AGPL-3.0-or-later"
