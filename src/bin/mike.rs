@@ -4,7 +4,7 @@ use std::time::Duration;
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(name = "mike", about = "Soundcore D3200 BLE audio downloader")]
+#[command(name = "mike", about = "BLE audio downloader for portable voice recorders")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -12,7 +12,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Scan for Soundcore D3200 devices
+    /// Scan for supported recording devices
     Scan {
         /// Scan duration in seconds
         #[arg(short, long, default_value = "5")]
@@ -63,9 +63,9 @@ async fn main() -> anyhow::Result<()> {
 
     match cli.command {
         Commands::Scan { timeout } => {
-            println!("Scanning for Soundcore devices ({timeout}s)…");
+            println!("Scanning for recording devices ({timeout}s)…");
             let devices =
-                mic_rs::SoundcoreRecorder::scan(Duration::from_secs(timeout)).await?;
+                mic_rs::Recorder::scan(None, Duration::from_secs(timeout)).await?;
 
             if devices.is_empty() {
                 println!("No devices found.");
@@ -79,7 +79,7 @@ async fn main() -> anyhow::Result<()> {
         Commands::Chars { device } => {
             let dev = find_device(&device).await?;
             println!("Connecting to {}…", dev);
-            let recorder = mic_rs::SoundcoreRecorder::connect(dev).await?;
+            let recorder = mic_rs::Recorder::connect(dev).await?;
             println!("GATT characteristics:");
             recorder.list_characteristics();
             recorder.disconnect().await?;
@@ -88,7 +88,7 @@ async fn main() -> anyhow::Result<()> {
         Commands::List { device } => {
             let dev = find_device(&device).await?;
             println!("Connecting to {}…", dev);
-            let mut recorder = mic_rs::SoundcoreRecorder::connect(dev).await?;
+            let mut recorder = mic_rs::Recorder::connect(dev).await?;
 
             println!("ECDH handshake…");
             recorder.handshake().await?;
@@ -115,7 +115,7 @@ async fn main() -> anyhow::Result<()> {
         } => {
             let dev = find_device(&device).await?;
             println!("Connecting to {}…", dev);
-            let mut recorder = mic_rs::SoundcoreRecorder::connect(dev).await?;
+            let mut recorder = mic_rs::Recorder::connect(dev).await?;
 
             println!("ECDH handshake…");
             recorder.handshake().await?;
@@ -147,7 +147,7 @@ async fn main() -> anyhow::Result<()> {
             let bytes = parse_hex(&hex)?;
             let dev = find_device(&device).await?;
             println!("Connecting to {}…", dev);
-            let mut recorder = mic_rs::SoundcoreRecorder::connect(dev).await?;
+            let mut recorder = mic_rs::Recorder::connect(dev).await?;
 
             println!("TX ({} bytes):", bytes.len());
             hexdump(&bytes);
@@ -166,9 +166,9 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn find_device(query: &str) -> anyhow::Result<mic_rs::DeviceInfo> {
+async fn find_device(query: &str) -> anyhow::Result<mic_rs::Device> {
     println!("Scanning…");
-    let devices = mic_rs::SoundcoreRecorder::scan(Duration::from_secs(5)).await?;
+    let devices = mic_rs::Recorder::scan(None, Duration::from_secs(5)).await?;
     devices
         .into_iter()
         .find(|d| d.address == query || d.name.to_lowercase().contains(&query.to_lowercase()))

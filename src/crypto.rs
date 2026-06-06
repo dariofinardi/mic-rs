@@ -6,7 +6,7 @@ use p256::{ecdh::EphemeralSecret, PublicKey};
 use rand_core::OsRng;
 use sha2::Sha256;
 
-use crate::error::SoundcoreError;
+use crate::error::RecorderError;
 use crate::protocol::{BLOCKS_PER_PACKET, FILE_KEY_MAGIC, HKDF_INFO, HKDF_SALT};
 
 type Aes256Ctr = Ctr128BE<Aes256>;
@@ -32,14 +32,14 @@ impl EcdhKeypair {
     pub fn derive_shared_secret(
         mut self,
         device_public_bytes: &[u8],
-    ) -> Result<[u8; 32], SoundcoreError> {
+    ) -> Result<[u8; 32], RecorderError> {
         let dev_public = PublicKey::from_sec1_bytes(device_public_bytes).map_err(|e| {
-            SoundcoreError::CryptoError(format!("invalid device public key: {e}"))
+            RecorderError::CryptoError(format!("invalid device public key: {e}"))
         })?;
         let secret = self
             .secret
             .take()
-            .ok_or_else(|| SoundcoreError::CryptoError("keypair already consumed".into()))?;
+            .ok_or_else(|| RecorderError::CryptoError("keypair already consumed".into()))?;
         let shared = secret.diffie_hellman(&dev_public);
         let raw = shared.raw_secret_bytes();
         let mut bytes = [0u8; 32];
@@ -65,7 +65,7 @@ pub fn decrypt_file_key(
     session_key: &[u8; 32],
     encrypted_key: &[u8; 46],
     session_nonce: &[u8; 16],
-) -> Result<[u8; 32], SoundcoreError> {
+) -> Result<[u8; 32], RecorderError> {
     let mut decrypted = [0u8; 46];
     decrypted.copy_from_slice(encrypted_key);
 
@@ -75,7 +75,7 @@ pub fn decrypt_file_key(
     cipher.apply_keystream(&mut decrypted);
 
     if &decrypted[..14] != FILE_KEY_MAGIC {
-        return Err(SoundcoreError::CryptoError(
+        return Err(RecorderError::CryptoError(
             "invalid file key: missing 'soundcored3200' magic header".into(),
         ));
     }

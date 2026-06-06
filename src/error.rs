@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub enum SoundcoreError {
+pub enum RecorderError {
     #[error("BLE adapter not found")]
     NoAdapter,
 
@@ -42,4 +42,4 @@ pub enum SoundcoreError {
     Ble(#[from] btleplug::Error),
 }
 
-pub type Result<T> = std::result::Result<T, SoundcoreError>;
+pub type Result<T> = std::result::Result<T, RecorderError>;

@@ -7,9 +7,9 @@ Currently supports the **Anker Soundcore Work D3200**. Support for **Plaud** dev
 ## Features
 
 - BLE device scanning and connection via [btleplug](https://crates.io/crates/btleplug)
+- Device-agnostic API with per-device protocol implementations
 - ECDH P-256 handshake with HKDF-SHA256 session key derivation
 - AES-CTR encrypted audio transfer and decryption
-- Proprietary binary protocol: file listing, download with progress, deletion
 - OGG/Opus container wrapping for downloaded audio
 - Raw command interface for protocol exploration
 - Cross-platform: Windows, macOS, Linux
@@ -28,12 +28,21 @@ tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 
 ```rust
 use std::time::Duration;
+use mic_rs::{Recorder, DeviceKind};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let devices = mic_rs::SoundcoreRecorder::scan(Duration::from_secs(5)).await?;
+    // Scan for all supported devices
+    let devices = Recorder::scan(None, Duration::from_secs(5)).await?;
+
+    // Or filter by device kind
+    let soundcore_only = Recorder::scan(
+        Some(DeviceKind::SoundcoreD3200),
+        Duration::from_secs(5),
+    ).await?;
+
     for dev in &devices {
-        println!("{dev}"); // "Soundcore D3200 (AA:BB:CC:DD:EE:FF)"
+        println!("{dev}"); // "Soundcore D3200 (AA:BB:CC:DD:EE:FF) [Soundcore D3200]"
     }
     Ok(())
 }
@@ -44,13 +53,14 @@ async fn main() -> anyhow::Result<()> {
 ```rust
 use std::path::Path;
 use std::time::Duration;
+use mic_rs::Recorder;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // 1. Scan and connect
-    let devices = mic_rs::SoundcoreRecorder::scan(Duration::from_secs(5)).await?;
+    // 1. Scan and connect to the first available device
+    let devices = Recorder::scan(None, Duration::from_secs(5)).await?;
     let device = devices.into_iter().next().expect("no device found");
-    let mut recorder = mic_rs::SoundcoreRecorder::connect(device).await?;
+    let mut recorder = Recorder::connect(device).await?;
 
     // 2. Establish encrypted session
     recorder.handshake().await?;
@@ -95,10 +105,10 @@ pub struct DownloadProgress {
 
 ### Error handling
 
-All operations return `mic_rs::Result<T>`, which wraps `SoundcoreError`:
+All operations return `mic_rs::Result<T>`, which wraps `RecorderError`:
 
 ```rust
-pub enum SoundcoreError {
+pub enum RecorderError {
     NoAdapter,
     DeviceNotFound,
     ConnectionFailed(String),
@@ -135,12 +145,12 @@ mike raw -d "D3200" -x "08EE0000001A0700000001"
 ```
 mic-rs/
   src/
-    lib.rs       -- SoundcoreRecorder public API
+    lib.rs       -- Recorder, Device, DeviceKind (public API)
     ble.rs       -- BLE scanning, connection, GATT read/write
     protocol.rs  -- Binary protocol: command building, response parsing
     crypto.rs    -- ECDH, HKDF, AES-CTR encryption/decryption
     download.rs  -- File transfer state machine, OGG/Opus wrapping
-    error.rs     -- Error types
+    error.rs     -- RecorderError
     bin/mike.rs  -- CLI binary
 ```
 

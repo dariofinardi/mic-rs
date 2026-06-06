@@ -6,7 +6,7 @@ use tokio::io::AsyncWriteExt;
 
 use crate::ble::BleConnection;
 use crate::crypto;
-use crate::error::{Result, SoundcoreError};
+use crate::error::{Result, RecorderError};
 use crate::protocol::*;
 
 #[derive(Debug, Clone)]
@@ -39,7 +39,7 @@ pub async fn download_file(
         };
         if resp.cmd_type == CMD_TYPE_FILE && resp.cmd_id == CMD_FILE_HEADER {
             let hdr = parse_file_header(&data).ok_or_else(|| {
-                SoundcoreError::InvalidResponse("failed to parse file header".into())
+                RecorderError::InvalidResponse("failed to parse file header".into())
             })?;
             break hdr;
         }
@@ -48,13 +48,13 @@ pub async fn download_file(
 
     match FileHeaderCode::from(file_header.code) {
         FileHeaderCode::Ok => {}
-        FileHeaderCode::FileNotExists => return Err(SoundcoreError::FileNotExists(file_id)),
+        FileHeaderCode::FileNotExists => return Err(RecorderError::FileNotExists(file_id)),
         FileHeaderCode::AlreadyComplete => {
             info!("file {} already downloaded", file_id);
             return Ok(output_dir.join(format!("{}.opus", file_id)));
         }
         other => {
-            return Err(SoundcoreError::FileTransferError(format!(
+            return Err(RecorderError::FileTransferError(format!(
                 "file header code: {:?}",
                 other
             )));

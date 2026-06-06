@@ -8,7 +8,7 @@ use futures::stream::StreamExt;
 use log::{debug, info};
 use uuid::Uuid;
 
-use crate::error::{Result, SoundcoreError};
+use crate::error::{Result, RecorderError};
 
 pub const SERVICE_UUID: Uuid = Uuid::from_u128(0x020cf5da_0000_1000_8000_00805f9b34fb);
 
@@ -31,7 +31,7 @@ impl std::fmt::Display for DeviceInfo {
 pub async fn scan_devices(timeout: Duration) -> Result<Vec<DeviceInfo>> {
     let manager = Manager::new().await?;
     let adapters = manager.adapters().await?;
-    let adapter = adapters.into_iter().next().ok_or(SoundcoreError::NoAdapter)?;
+    let adapter = adapters.into_iter().next().ok_or(RecorderError::NoAdapter)?;
 
     info!("starting BLE scan ({:.0}s)…", timeout.as_secs_f64());
     adapter
@@ -102,7 +102,7 @@ impl BleConnection {
                         || c.properties.contains(CharPropFlags::WRITE_WITHOUT_RESPONSE)
                 })
             })
-            .ok_or_else(|| SoundcoreError::CharacteristicNotFound("write".into()))?
+            .ok_or_else(|| RecorderError::CharacteristicNotFound("write".into()))?
             .clone();
 
         let notify_char = chars
@@ -114,7 +114,7 @@ impl BleConnection {
                     .iter()
                     .find(|c| c.properties.contains(CharPropFlags::NOTIFY))
             })
-            .ok_or_else(|| SoundcoreError::CharacteristicNotFound("notify".into()))?
+            .ok_or_else(|| RecorderError::CharacteristicNotFound("notify".into()))?
             .clone();
 
         info!(
@@ -162,8 +162,8 @@ impl BleConnection {
                 debug!("BLE recv {} bytes", data.len());
                 Ok(data)
             }
-            Ok(None) => Err(SoundcoreError::Disconnected),
-            Err(_) => Err(SoundcoreError::Timeout),
+            Ok(None) => Err(RecorderError::Disconnected),
+            Err(_) => Err(RecorderError::Timeout),
         }
     }
 
